@@ -1,5 +1,5 @@
 # The incredible project title
 
-GEO Data: [Dataset](https://www.youtube.com/watch?v=dQw4w9WgXcQ) 
+Dataset: [Link](https://target-data.nci.nih.gov/Public/AML/mRNA-seq/L3/expression/)
 
-Scientific Question: American Aboriginals? Australian Aboriginals? Fungi? 
+Scientific Question: Can we identify different types of pediatric AML based on unlabeled RNA-seq data?
