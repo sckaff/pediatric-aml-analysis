@@ -1,2 +1,3 @@
 .DS_Store
-Data/
+Pre_Processed/
+Data/processe_data.pickle
