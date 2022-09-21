@@ -1,3 +1,4 @@
 .DS_Store
-Pre_Processed/
-Data/processe_data.pickle
+Data/
+Code/.RDataTmp
+Code/.Rhistory

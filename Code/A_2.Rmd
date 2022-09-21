@@ -1,0 +1,147 @@
+---
+title: "A_2"
+output: html_document
+date: '2022-09-21'
+---
+
+Installing all required libraries and setting seed for reproducability
+```{r}
+# Attach the DESeq2 library
+library(DESeq2)
+
+# Attach the ggplot2 library for plotting
+library(ggplot2)
+
+# We will need this so we can use the pipe: %>%
+library(magrittr)
+
+# Tidyverse
+library(tidyverse)
+
+# Heat Map
+library(pheatmap)
+
+set.seed(12345)
+```
+
+Setting the path and getting dataframes
+```{r}
+setwd('/Users/sckaff/Desktop/CGS4144/Assignment_2/Data/')
+data <- read.csv('data_csv.csv')
+clinical <- read.csv('clinical_csv.csv')
+```
+
+Cleaning the data
+```{r}
+rownames(data) <- data$index
+data$index = NULL
+clinical <- clinical %>% rename(Condition = Primary.Cytogenetic.Code)
+```
+
+Initializing DESeq object
+```{r}
+ddset <- DESeqDataSetFromMatrix(
+  countData = data,
+  colData = clinical, 
+  design = ~Condition
+)
+```
+
+Creating DESeq object and storing its results
+```{r echo=False}
+deseq_object <- DESeq(ddset)
+deseq_results <- results(deseq_object2)
+```
+
+Here we will use `lfcShrink()` function to obtain shrunken log fold change estimates based on negative binomial distribution.
+This will add the estimates to your results table. 
+Using `lfcShrink()` can help decrease noise and preserve large differences between groups (it requires that `apeglm` package be installed) [@Zhu2018].
+```{r}
+deseq_results <- lfcShrink(
+  deseq_object, # The original DESeq2 object after running DESeq()
+  coef = 2, # The log fold change coefficient used in DESeq(); the default is 2.
+  res = deseq_results # The original DESeq2 results table
+)
+```
+
+```{r}
+head(deseq_results)
+```
+
+
+Cleaning the results to suit what we want
+```{r}
+# this is of class DESeqResults -- we want a data frame
+deseq_df <- deseq_results %>%
+  # make into data.frame
+  as.data.frame() %>%
+  # the gene names are row names -- let's make them a column for easy display
+  tibble::rownames_to_column("Gene") %>%
+  # add a column for significance threshold results
+  dplyr::mutate(threshold = padj < 0.05) %>%
+  # sort by statistic -- the highest values will be genes with
+  # higher expression in RPL10 mutated samples
+  dplyr::arrange(dplyr::desc(log2FoldChange))
+```
+
+```{r}
+head(deseq_df)
+```
+
+```{r}
+plotCounts(ddset, gene = "GSX1", intgroup = "Condition")
+```
+
+Creating the volcano plot
+```{r}
+volcano_plot <- EnhancedVolcano::EnhancedVolcano(
+  deseq_df,
+  lab = deseq_df$Gene,
+  x = "log2FoldChange",
+  y = "padj",
+  pCutoff = 0.01 # Loosen the cutoff since we supplied corrected p-values
+)
+```
+
+```{r}
+volcano_plot
+```
+
+Creating Heat Map
+
+- Normalizing data
+```{r}
+dds_norm <- vst(ddset)
+```
+
+- Choosing genes of interest
+```{r}
+# Calculate the variance for each gene
+variances <- apply(assay(dds_norm), 1, var)
+
+# Determine the upper quartile variance cutoff value
+upper_var <- quantile(variances, 0.9995)
+
+# Filter the data choosing only genes whose variances are in the upper quartile
+df_by_var <- data.frame(assay(dds_norm)) %>%
+  dplyr::filter(variances > upper_var)
+```
+
+Not-so-good Heat Map
+```{r}
+heatmap <- pheatmap(
+  df_by_var,
+  cluster_rows = TRUE, # Cluster the rows of the heatmap (genes in this case)
+  cluster_cols = TRUE, # Cluster the columns of the heatmap (samples),
+  show_rownames = FALSE, # There are too many genes to clearly show the labels
+  main = "Heat Map",
+  colorRampPalette(c(
+    "deepskyblue",
+    "black",
+    "yellow"
+  ))(25
+  ),
+  scale = "row" # Scale values in the direction of genes (rows)
+)
+```
+
