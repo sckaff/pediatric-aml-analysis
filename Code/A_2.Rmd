@@ -4,7 +4,7 @@ output: html_document
 date: '2022-09-21'
 ---
 
-Installing all required libraries and setting seed for reproducability
+Attaching all required libraries and setting seed for reproducability
 ```{r}
 # Attach the DESeq2 library
 library(DESeq2)
@@ -21,14 +21,18 @@ library(tidyverse)
 # Heat Map
 library(pheatmap)
 
+# For automatically setting the working directory path
+library(rstudioapi)
+
 set.seed(12345)
 ```
 
-Setting the path and getting dataframes
+Get the csv into dataframes
 ```{r}
-setwd('/Users/sckaff/Desktop/CGS4144/Assignment_2/Data/')
-data <- read.csv('data_csv.csv')
-clinical <- read.csv('clinical_csv.csv')
+# Set the path of the working directory
+setwd(dirname(getActiveDocumentContext()$path))
+data <- read.csv('../Data/counts.csv')
+clinical <- read.csv('../Data/conditions.csv')
 ```
 
 Cleaning the data
@@ -42,7 +46,7 @@ Initializing DESeq object
 ```{r}
 ddset <- DESeqDataSetFromMatrix(
   countData = data,
-  colData = clinical, 
+  colData = clinical,
   design = ~Condition
 )
 ```
