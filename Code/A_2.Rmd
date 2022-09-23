@@ -31,15 +31,19 @@ Get the csv into dataframes
 ```{r}
 # Set the path of the working directory
 setwd(dirname(getActiveDocumentContext()$path))
-data <- read.csv('../Data/counts.csv')
-clinical <- read.csv('../Data/conditions.csv')
+# Read the csv files to dfs
+data <- read_csv("../Data/counts.csv") %>% tibble::column_to_rownames("Gene") # Set "Gene" column to index
+clinical <- read_csv("../Data/conditions.csv") %>% as.data.frame(clinical)
 ```
 
 Cleaning the data
 ```{r}
-rownames(data) <- data$index
-data$index = NULL
-clinical <- clinical %>% rename(Condition = Primary.Cytogenetic.Code)
+# Rename column to Condition for accessibility
+clinical <- rename(clinical,c('Condition'='Primary Cytogenetic Code'))
+# Explicitly change Condition to a factor so to order by normal (control):disease
+clinical <- clinical %>% dplyr::mutate(
+  Condition = factor(Condition, levels = c("Normal", "Disease"))
+)
 ```
 
 Initializing DESeq object
@@ -54,7 +58,7 @@ ddset <- DESeqDataSetFromMatrix(
 Creating DESeq object and storing its results
 ```{r echo=False}
 deseq_object <- DESeq(ddset)
-deseq_results <- results(deseq_object2)
+deseq_results <- results(deseq_object)
 ```
 
 Here we will use `lfcShrink()` function to obtain shrunken log fold change estimates based on negative binomial distribution.
@@ -92,8 +96,20 @@ deseq_df <- deseq_results %>%
 head(deseq_df)
 ```
 
+[Gene expressions associated with AML found here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5807040/)
+- CEBPA expression is linked to the differentiation of myeloid progenitors 
+- CD74 expression is linked to antigen presentation
 ```{r}
-plotCounts(ddset, gene = "GSX1", intgroup = "Condition")
+png("../Plots/CEBPA-exp.png")
+# Using overexpression of CEBPA as a biomarker for AML
+plotCounts(ddset, gene = "CEBPA", intgroup = "Condition")
+dev.off()
+```
+```{r}
+png("../Plots/CD74-exp.png")
+# Using underexpression of CD74 as a biomarker for AML
+plotCounts(ddset, gene = "CD74", intgroup = "Condition")
+dev.off()
 ```
 
 Creating the volcano plot
@@ -106,9 +122,26 @@ volcano_plot <- EnhancedVolcano::EnhancedVolcano(
   pCutoff = 0.01 # Loosen the cutoff since we supplied corrected p-values
 )
 ```
-
 ```{r}
 volcano_plot
+```
+
+Prettier volcano plot
+```{r}
+pretty_volcano_plot <- EnhancedVolcano::EnhancedVolcano(
+  deseq_df,
+  lab = deseq_df$Gene,
+  x = "log2FoldChange",
+  y = "padj",
+  pCutoff = 0.01,
+  pointSize = 3.0,
+  legendLabels=c('Not sig.','Log2FC','p-value',
+      'p-value & Log2FC'),
+  title = "Gene expression differentiation in normal vs diseased sample groups"
+)
+```
+```{r}
+pretty_volcano_plot
 ```
 
 Creating Heat Map
