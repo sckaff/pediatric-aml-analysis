@@ -4,8 +4,10 @@ output: html_document
 date: '2022-09-21'
 ---
 
-Attaching all required libraries and setting seed for reproducability
+Attaching all required libraries and setting seed for reproducibility
 ```{r}
+
+# run install.packages('BiocManager) && BiocManager::install("DESeq2") and ("apeglm") ("EnhancedVolcano")
 # Attach the DESeq2 library
 library(DESeq2)
 
@@ -18,19 +20,17 @@ library(magrittr)
 # Tidyverse
 library(tidyverse)
 
-# Heat Map
-library(pheatmap)
-
 # For automatically setting the working directory path
 library(rstudioapi)
 
 set.seed(12345)
 ```
 
-Get the csv into dataframes
+Get the csv into data frames
 ```{r}
 # Set the path of the working directory
 setwd(dirname(getActiveDocumentContext()$path))
+#setwd("C:\\Users\\sckaffs.fernando\\Desktop\\Assignment_2\\Data")
 # Read the csv files to dfs
 data <- read_csv("../Data/counts.csv") %>% tibble::column_to_rownames("Gene") # Set "Gene" column to index
 clinical <- read_csv("../Data/conditions.csv") %>% as.data.frame(clinical)
@@ -105,31 +105,11 @@ png("../Plots/CEBPA-exp.png")
 plotCounts(ddset, gene = "CEBPA", intgroup = "Condition")
 dev.off()
 ```
-```{r}
-png("../Plots/CD74-exp.png")
-# Using underexpression of CD74 as a biomarker for AML
-plotCounts(ddset, gene = "CD74", intgroup = "Condition")
-dev.off()
-```
 
-Creating the volcano plot
+Volcano Plot
 ```{r}
+#png("../Plots/pretty_volcano_plot.png")
 volcano_plot <- EnhancedVolcano::EnhancedVolcano(
-  deseq_df,
-  lab = deseq_df$Gene,
-  x = "log2FoldChange",
-  y = "padj",
-  pCutoff = 0.01 # Loosen the cutoff since we supplied corrected p-values
-)
-```
-```{r}
-volcano_plot
-```
-
-Prettier volcano plot
-```{r}
-png("../Plots/pretty_volcano_plot.png")
-pretty_volcano_plot <- EnhancedVolcano::EnhancedVolcano(
   deseq_df,
   lab = deseq_df$Gene,
   x = "log2FoldChange",
@@ -143,46 +123,28 @@ pretty_volcano_plot <- EnhancedVolcano::EnhancedVolcano(
   colAlpha = 4/5,
 )
 ```
+
 ```{r}
-pretty_volcano_plot
-dev.off()
+volcano_plot
 ```
 
-Creating Heat Map
-
-- Normalizing data
+- Choosing genes of interest (And send it to python)
 ```{r}
+# Normalizing data
 dds_norm <- vst(ddset)
-```
 
-- Choosing genes of interest
-```{r}
 # Calculate the variance for each gene
 variances <- apply(assay(dds_norm), 1, var)
 
 # Determine the upper quartile variance cutoff value
-upper_var <- quantile(variances, 0.9995)
+upper_var <- quantile(variances, 0.99947)
 
 # Filter the data choosing only genes whose variances are in the upper quartile
 df_by_var <- data.frame(assay(dds_norm)) %>%
   dplyr::filter(variances > upper_var)
 ```
 
-Not-so-good Heat Map
 ```{r}
-heatmap <- pheatmap(
-  df_by_var,
-  cluster_rows = TRUE, # Cluster the rows of the heatmap (genes in this case)
-  cluster_cols = TRUE, # Cluster the columns of the heatmap (samples),
-  show_rownames = FALSE, # There are too many genes to clearly show the labels
-  main = "Heat Map",
-  colorRampPalette(c(
-    "deepskyblue",
-    "black",
-    "yellow"
-  ))(25
-  ),
-  scale = "row" # Scale values in the direction of genes (rows)
-)
+setwd(dirname(getActiveDocumentContext()$path))
+write.csv(df_by_var, '../Data/wrong_significant_genes.csv', row.names = TRUE)
 ```
-
