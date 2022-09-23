@@ -128,6 +128,7 @@ volcano_plot
 
 Prettier volcano plot
 ```{r}
+png("../Plots/pretty_volcano_plot.png")
 pretty_volcano_plot <- EnhancedVolcano::EnhancedVolcano(
   deseq_df,
   lab = deseq_df$Gene,
@@ -137,11 +138,14 @@ pretty_volcano_plot <- EnhancedVolcano::EnhancedVolcano(
   pointSize = 3.0,
   legendLabels=c('Not sig.','Log2FC','p-value',
       'p-value & Log2FC'),
-  title = "Gene expression differentiation in normal vs diseased sample groups"
+  title = "Differential expression",
+  subtitle = bquote(italic("Abnormal vs normal AML tumor cells")),
+  colAlpha = 4/5,
 )
 ```
 ```{r}
 pretty_volcano_plot
+dev.off()
 ```
 
 Creating Heat Map
