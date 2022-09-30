@@ -37,10 +37,9 @@ clinical <- read_csv("../Data/clinical_event_sorted.csv") %>% as.data.frame(clin
 ```
 
 ```{r}
-# Explicitly change Condition to a factor so to order by normal (control):disease
-#clinical <- clinical %>% dplyr::mutate(
-#  Condition = factor(Condition, levels = c("Normal", "Disease"))
-#)
+
+names(clinical)[names(clinical) == "Primary Cytogenetic Code"] <- "PCC"
+
 ```
 
 Initializing DESeq object
@@ -48,7 +47,7 @@ Initializing DESeq object
 ddset <- DESeqDataSetFromMatrix(
   countData = data,
   colData = clinical,
-  design = ~Event_Boolean
+  design = ~PCC
 )
 ```
 
@@ -64,7 +63,7 @@ Using `lfcShrink()` can help decrease noise and preserve large differences betwe
 ```{r}
 deseq_results <- lfcShrink(
   deseq_object, # The original DESeq2 object after running DESeq()
-  coef = 2, # The log fold change coefficient used in DESeq(); the default is 2.
+  coef = 6, # The log fold change coefficient used in DESeq(); the default is 2.
   res = deseq_results # The original DESeq2 results table
 )
 ```
@@ -93,13 +92,21 @@ deseq_df <- deseq_results %>%
 head(deseq_df)
 ```
 
-[Gene expressions associated with AML found here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5807040/)
-- CEBPA expression is linked to the differentiation of myeloid progenitors 
-- CD74 expression is linked to antigen presentation
+Gene expressions associated with different types of AML
 ```{r}
-# Using overexpression of CEBPA as a biomarker for AML
-plotCounts(ddset, gene = "B3GAT2", intgroup = "Event_Boolean")
+
+gene_expression <- function(gene_name){
+  file = paste("../Figures/Gene/", gene_name, ".png")
+  png(file)
+  plotCounts(ddset, gene = gene_name, intgroup = "PCC")
+  dev.off()
+}
+
+for (x in row.names(df_by_var))
+  gene_expression(x)
+
 ```
+
 
 Volcano Plot
 ```{r}
@@ -114,7 +121,7 @@ volcano_plot <- EnhancedVolcano::EnhancedVolcano(
   legendLabels=c('Not sig.','Log2FC','p-value',
       'p-value & Log2FC'),
   title = "Differential expression",
-  subtitle = bquote(italic("AML Event/No Event gene expression volcano plot")),
+  subtitle = bquote(italic("AML primary cytogenetic code volcano plot")),
   colAlpha = 4/5,
 )
 ```
@@ -123,7 +130,7 @@ volcano_plot <- EnhancedVolcano::EnhancedVolcano(
 volcano_plot
 ```
 
-- Choosing genes of interest (And send it to python)
+- GENE ENHANCEMENT -- Choosing 20 most variant genes (And plot the heatmap on python)
 ```{r}
 # Normalizing data
 dds_norm <- vst(ddset)
@@ -132,7 +139,7 @@ dds_norm <- vst(ddset)
 variances <- apply(assay(dds_norm), 1, var)
 
 # Determine the upper quartile variance cutoff value
-upper_var <- quantile(variances, 0.99947)
+upper_var <- quantile(variances, 0.99943)
 
 # Filter the data choosing only genes whose variances are in the upper quartile
 df_by_var <- data.frame(assay(dds_norm)) %>%
@@ -142,4 +149,36 @@ df_by_var <- data.frame(assay(dds_norm)) %>%
 ```{r}
 setwd(dirname(getActiveDocumentContext()$path))
 write.csv(df_by_var, '../Data/significant_genes.csv', row.names = TRUE)
+```
+
+
+- GENE ENHANCEMENT BY GPROFILER2
+
+  - Install Package
+```{r}
+
+#install.packages("gprofiler2")
+library(gprofiler2)
+
+```
+
+
+```{r}
+
+gostres <- gost(row.names(data), 
+                organism = "hsapiens", 
+                multi_query = FALSE, significant = TRUE, exclude_iea = FALSE, 
+                measure_underrepresentation = FALSE, evcodes = FALSE, 
+                user_threshold = 0.05, correction_method = "g_SCS", 
+                domain_scope = "annotated", custom_bg = NULL, 
+                numeric_ns = "", sources = NULL, as_short_link = FALSE)
+
+```
+
+```{r}
+
+names(gostres)
+head(gostres$result, 20)
+row.names(data)
+
 ```
