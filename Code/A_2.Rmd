@@ -5,8 +5,7 @@ date: '2022-09-21'
 ---
 
 Attaching all required libraries and setting seed for reproducibility
-```{r}
-
+```{r attach-libs}
 # run install.packages('BiocManager) && BiocManager::install("DESeq2") and ("apeglm") ("EnhancedVolcano")
 # Attach the DESeq2 library
 library(DESeq2)
@@ -26,8 +25,8 @@ library(rstudioapi)
 set.seed(12345)
 ```
 
-Get the csv into data frames
-```{r}
+Get the CSVs [generated in Python](./Assignment_2.ipynb#export-to-r) into data frames
+```{r get-data}
 # Set the path of the working directory
 setwd(dirname(getActiveDocumentContext()$path))
 
@@ -36,14 +35,12 @@ data <- read_csv("../Data/data_event_sorted.csv") %>% tibble::column_to_rownames
 clinical <- read_csv("../Data/clinical_event_sorted.csv") %>% as.data.frame(clinical)
 ```
 
-```{r}
-
+```{r rename-PCC}
 names(clinical)[names(clinical) == "Primary Cytogenetic Code"] <- "PCC"
-
 ```
 
 Initializing DESeq object
-```{r}
+```{r init-deseq}
 ddset <- DESeqDataSetFromMatrix(
   countData = data,
   colData = clinical,
@@ -52,7 +49,7 @@ ddset <- DESeqDataSetFromMatrix(
 ```
 
 Creating DESeq object and storing its results
-```{r echo=False}
+```{r make-object, echo=False}
 deseq_object <- DESeq(ddset)
 deseq_results <- results(deseq_object)
 ```
@@ -60,7 +57,7 @@ deseq_results <- results(deseq_object)
 Here we will use `lfcShrink()` function to obtain shrunken log fold change estimates based on negative binomial distribution.
 This will add the estimates to your results table. 
 Using `lfcShrink()` can help decrease noise and preserve large differences between groups (it requires that `apeglm` package be installed) [@Zhu2018].
-```{r}
+```{r obtain-lfc}
 deseq_results <- lfcShrink(
   deseq_object, # The original DESeq2 object after running DESeq()
   coef = 6, # The log fold change coefficient used in DESeq(); the default is 2.
@@ -68,13 +65,13 @@ deseq_results <- lfcShrink(
 )
 ```
 
-```{r}
+```{r view-results}
 head(deseq_results)
 ```
 
 
 Cleaning the results to suit what we want
-```{r}
+```{r clean-results}
 # this is of class DESeqResults -- we want a data frame
 deseq_df <- deseq_results %>%
   # make into data.frame
@@ -88,15 +85,14 @@ deseq_df <- deseq_results %>%
   dplyr::arrange(dplyr::desc(log2FoldChange))
 ```
 
-```{r}
+```{r view-cleaned-results}
 head(deseq_df)
 ```
 
 Gene expressions associated with different types of AML
-```{r}
-
-gene_expression <- function(gene_name){
-  file = paste("../Figures/Gene/", gene_name, ".png")
+```{r get-associated-expressions}
+gene_expression <- function(gene_name) {
+  file <- paste("../Figures/Gene/", gene_name, ".png")
   png(file)
   plotCounts(ddset, gene = gene_name, intgroup = "PCC")
   dev.off()
@@ -104,12 +100,11 @@ gene_expression <- function(gene_name){
 
 for (x in row.names(df_by_var))
   gene_expression(x)
-
 ```
 
 
 Volcano Plot
-```{r}
+```{r volcano-plot}
 #png("../Plots/pretty_volcano_plot.png")
 volcano_plot <- EnhancedVolcano::EnhancedVolcano(
   deseq_df,
@@ -126,12 +121,12 @@ volcano_plot <- EnhancedVolcano::EnhancedVolcano(
 )
 ```
 
-```{r}
+```{r view-volcano-plot}
 volcano_plot
 ```
 
-- GENE ENHANCEMENT -- Choosing 20 most variant genes (And plot the heatmap on python)
-```{r}
+GENE ENHANCEMENT -- Choosing 20 most variant genes ([And plot the heatmap in Python](./Assignment_2.ipynb#heat-map))
+```{r extract-diff-expression}
 # Normalizing data
 dds_norm <- vst(ddset)
 
@@ -146,7 +141,7 @@ df_by_var <- data.frame(assay(dds_norm)) %>%
   dplyr::filter(variances > upper_var)
 ```
 
-```{r}
+```{r save-list}
 setwd(dirname(getActiveDocumentContext()$path))
 write.csv(df_by_var, '../Data/significant_genes.csv', row.names = TRUE)
 ```
@@ -155,30 +150,70 @@ write.csv(df_by_var, '../Data/significant_genes.csv', row.names = TRUE)
 - GENE ENHANCEMENT BY GPROFILER2
 
   - Install Package
-```{r}
-
-#install.packages("gprofiler2")
+```{r attach-lib-for-enhancement}
+# install.packages("gprofiler2")
 library(gprofiler2)
-
 ```
 
 
-```{r}
-
-gostres <- gost(row.names(data), 
-                organism = "hsapiens", 
-                multi_query = FALSE, significant = TRUE, exclude_iea = FALSE, 
-                measure_underrepresentation = FALSE, evcodes = FALSE, 
-                user_threshold = 0.05, correction_method = "g_SCS", 
-                domain_scope = "annotated", custom_bg = NULL, 
-                numeric_ns = "", sources = NULL, as_short_link = FALSE)
-
+```{r fernando-enhancement}
+gostres <- gost(row.names(data),
+  organism = "hsapiens",
+  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+  measure_underrepresentation = FALSE, evcodes = FALSE,
+  user_threshold = 0.05, correction_method = "g_SCS",
+  domain_scope = "annotated", custom_bg = NULL,
+  numeric_ns = "", sources = NULL, as_short_link = FALSE
+)
 ```
 
-```{r}
-
+```{r view-fernando-enhancement}
 names(gostres)
 head(gostres$result, 20)
 row.names(data)
+```
 
+GENE ENHANCEMENT ANALYSIS BY topGO
+```{r attach-libs-for-topGO-enhancement}
+BiocManager::install("topGO")
+BiocManager::install("org.Hs.eg.db")
+library(topGO)
+library(org.Hs.eg.db)
+```
+Load the deseq_df to avoid generating new deseq objects
+```{r}
+load("df.RData")
+deseq_df <- na.omit(deseq_df)
+```
+Generate factor based on p-vals and gene names
+```{r}
+gene_list <- as.integer(deseq_df$padj)
+names(gene_list) <- deseq_df$Gene
+```
+Function for selecting significant genes
+```{r}
+topDiffGenes <- function(allScore) {
+  return(allScore < 0.01)
+}
+```
+Create GO object 
+```{r}
+godata <- new("topGOdata",
+  ontology = "MF",
+  allGenes = gene_list,
+  geneSel = topDiffGenes,
+  annot = annFUN.org,
+  mapping = "org.Hs.eg.db",
+  ID = "symbol"
+)
+```
+Extract list of significant genes
+```{r}
+sig_genes <- sigGenes(godata)
+str(sig_genes)
+numSigGenes(godata)
+```
+Graph godata
+```{r}
+graph(godata)
 ```
