@@ -1,54 +1,34 @@
 ---
-title: "A_2"
+title: "Assignment 2"
 output: html_document
 date: '2022-09-21'
 ---
-
-Attaching all required libraries and setting seed for reproducibility
-```{r}
-
-# run install.packages('BiocManager) && BiocManager::install("DESeq2") and ("apeglm") ("EnhancedVolcano")
-# Attach the DESeq2 library
-library(DESeq2)
-
-# Attach the ggplot2 library for plotting
-library(ggplot2)
-
-# We will need this so we can use the pipe: %>%
-library(magrittr)
-
-# Tidyverse
-library(tidyverse)
-
-# For automatically setting the working directory path
-library(rstudioapi)
-
-# Gene enhancement libraries
-library(topGO)
-library(org.Hs.eg.db)
-library(gprofiler2)
-
+Install and attach all required libs using librarian package
+```{r Install and attach project libraries}
+# Script for installing required R packages for this project
+install.packages("librarian")
+install.packages("BiocManager") # For using librarian to install Bioconductor packages
+BiocManager::install("Biobase") # For using librarian to install Bioconductor packages
+librarian::shelf(DESeq2, apeglm, ggplot2, magrittr, tidyverse, rstudioapi, dplyr, tidyr, EnhancedVolcano, gprofiler2, topGO, org.Hs.eg.db)
+```
+Set seed for reproducibility
+```{r Set seed}
 set.seed(12345)
 ```
 
-Get the csv into data frames
-```{r}
+Get the CSVs [generated in Python](./Assignment_2.ipynb#export-to-r) into data frames
+```{r Load data from CSVs}
 # Set the path of the working directory
 setwd(dirname(getActiveDocumentContext()$path))
 
 # Read the csv files to dfs
 data <- read_csv("../Data/data_event_sorted.csv") %>% tibble::column_to_rownames("index")
 clinical <- read_csv("../Data/clinical_event_sorted.csv") %>% as.data.frame(clinical)
-```
-
-```{r}
-
-names(clinical)[names(clinical) == "Primary Cytogenetic Code"] <- "PCC"
-
+names(clinical)[names(clinical) == "Primary Cytogenetic Code"] <- "PCC" # Rename PCC column
 ```
 
 Initializing DESeq object
-```{r}
+```{r Initialize DESeq object}
 ddset <- DESeqDataSetFromMatrix(
   countData = data,
   colData = clinical,
@@ -57,7 +37,7 @@ ddset <- DESeqDataSetFromMatrix(
 ```
 
 Creating DESeq object and storing its results
-```{r echo=False}
+```{r Make DESeq object, echo=False}
 deseq_object <- DESeq(ddset)
 deseq_results <- results(deseq_object)
 ```
@@ -65,7 +45,7 @@ deseq_results <- results(deseq_object)
 Here we will use `lfcShrink()` function to obtain shrunken log fold change estimates based on negative binomial distribution.
 This will add the estimates to your results table. 
 Using `lfcShrink()` can help decrease noise and preserve large differences between groups (it requires that `apeglm` package be installed) [@Zhu2018].
-```{r}
+```{r Obtaining LFC}
 deseq_results <- lfcShrink(
   deseq_object, # The original DESeq2 object after running DESeq()
   coef = 6, # The log fold change coefficient used in DESeq(); the default is 2.
@@ -73,13 +53,13 @@ deseq_results <- lfcShrink(
 )
 ```
 
-```{r}
+```{r DESeq2 results}
 head(deseq_results)
 ```
 
 
 Cleaning the results to suit what we want
-```{r}
+```{r Cleaning results}
 # this is of class DESeqResults -- we want a data frame
 deseq_df <- deseq_results %>%
   # make into data.frame
@@ -93,31 +73,26 @@ deseq_df <- deseq_results %>%
   dplyr::arrange(dplyr::desc(log2FoldChange))
 ```
 
-```{r}
+```{r Viewing cleaned results}
 head(deseq_df)
-save(deseq_df, file= "../Data/df.RData") # So we don't have to wait for the DESeq2 object again.
 ```
 
 Gene expressions associated with different types of AML
-```{r}
-
-gene_expression <- function(gene_name){
-  file = paste("../Figures/Gene/", gene_name, ".png")
+```{r Getting gene expressions}
+gene_expression <- function(gene_name) {
+  file <- paste("../Figures/Gene/", gene_name, ".png")
   png(file)
   plotCounts(ddset, gene = gene_name, intgroup = "PCC")
   dev.off()
 }
 
-gene_expression("COL11A2")
-gene_expression("PRDM16")
 for (x in row.names(df_by_var))
   gene_expression(x)
-
 ```
 
 
 Volcano Plot
-```{r}
+```{r Generating volcano plot}
 #png("../Plots/pretty_volcano_plot.png")
 volcano_plot <- EnhancedVolcano::EnhancedVolcano(
   deseq_df,
@@ -138,8 +113,8 @@ volcano_plot <- EnhancedVolcano::EnhancedVolcano(
 volcano_plot
 ```
 
-- GENE ENHANCEMENT -- Choosing 20 most variant genes (And plot the heatmap on python)
-```{r}
+GENE ENHANCEMENT -- Choosing 20 most variant genes ([And plot the heatmap in Python](./Assignment_2.ipynb#heat-map))
+```{r Extracting differentially expressed genes}
 # Normalizing data
 dds_norm <- vst(ddset)
 
@@ -154,84 +129,51 @@ df_by_var <- data.frame(assay(dds_norm)) %>%
   dplyr::filter(variances > upper_var)
 ```
 
-```{r}
+```{r Saving the list of DEGs}
 setwd(dirname(getActiveDocumentContext()$path))
 write.csv(df_by_var, '../Data/significant_genes.csv', row.names = TRUE)
 ```
 
 
 - GENE ENHANCEMENT BY GPROFILER2
-
-  - Install Package
-```{r}
-# Read the saved DDSet 
-setwd(dirname(getActiveDocumentContext()$path))
-load("df.RData")
-```
-
-Making the top 40% quantile in the gprofiler2
-```{r}
-
-# Normalizing data
-dds_norm <- vst(ddset)
-
-# Calculate the variance for each gene
-variances <- apply(assay(dds_norm), 1, var)
-
-# Determine the upper 80% quartile variance cutoff value for gprofiler2
-upper_var <- quantile(variances, 0.40)
-
-# Filter the data choosing only genes whose variances are in the upper quartile
-df_by_var <- data.frame(assay(dds_norm)) %>%
-  dplyr::filter(variances > upper_var)
-
-gostres <- gost(row.names(df_by_var), organism = "hsapiens")
-
-# Save it
-file = paste("../Figures/gp2_40_quantile.png")
-png(file)
-gostplot(gostres, capped = FALSE, interactive= FALSE)
-dev.off()
-
-setwd(dirname(getActiveDocumentContext()$path))
-
+```{r Gene Enhancement with gprofiler2}
+gostres <- gost(row.names(data),
+  organism = "hsapiens",
+  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+  measure_underrepresentation = FALSE, evcodes = FALSE,
+  user_threshold = 0.05, correction_method = "g_SCS",
+  domain_scope = "annotated", custom_bg = NULL,
+  numeric_ns = "", sources = NULL, as_short_link = FALSE
+)
 ```
 
 ```{r}
-
-gostres <- gost(query = c("CD34", "HBG2", "HBB", "MSLN", "MPO", "EPX", "ZNF521", "MEIS1", "TRH", "HOXA9", "HOXA6", "XIST", "KDM5D", "DDX3Y", "ZFY", "PRKY", "USP9Y", "RPS4Y1", "TXLNGY", "UTY"), organism = "hsapiens")
-
-head(gostres$result)
-
-# Save it
-file = paste("../Figures/gp2_20_genes.png")
-png(file)
-gostplot(gostres, capped = FALSE, interactive= FALSE)
-dev.off()
-
+names(gostres)
+head(gostres$result, 20)
+row.names(data)
 ```
 
-# GENE ENHANCEMENT BY TOPGO
+GENE ENHANCEMENT ANALYSIS BY topGO
 Load the deseq_df to avoid generating new deseq objects
-```{r}
+```{r Initializing DEGs for enhancement using topGO}
 load("df.RData")
 deseq_df <- na.omit(deseq_df)
 ```
 Generate factor based on p-vals and gene names
-```{r}
+```{r Generating p-val and gene name factor}
 gene_list <- as.integer(deseq_df$padj)
 names(gene_list) <- deseq_df$Gene
 ```
 Function for selecting significant genes
-```{r}
+```{r Select significant genes}
 topDiffGenes <- function(allScore) {
   return(allScore < 0.01)
 }
 ```
 Create GO object 
-```{r}
+```{r Creating topGO object}
 godata <- new("topGOdata",
-  ontology = "CC", # CAN BE MF AND BP
+  ontology = "MF",
   allGenes = gene_list,
   geneSel = topDiffGenes,
   annot = annFUN.org,
@@ -240,16 +182,9 @@ godata <- new("topGOdata",
 )
 ```
 Extract list of significant genes
-```{r}
+```{r Extracting significant DEGs}
 sig_genes <- sigGenes(godata)
 str(sig_genes)
 numSigGenes(godata)
 ```
 
-Graph godata
-```{r}
-# Ontology - Cellular Component
-sig_genes
-
-# REPEAT FOR MF AND BP
-```
