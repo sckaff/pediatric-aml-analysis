@@ -1,0 +1,79 @@
+---
+title: "A_3"
+output: html_document
+date: "2022-10-24"
+---
+
+Import libraries
+```{r}
+library(DESeq2)
+library(rstudioapi)
+library(dplyr)
+
+set.seed(12345)
+```
+
+Read important datasets from Assignment 2
+```{r}
+setwd(dirname(getActiveDocumentContext()$path))
+
+# Saved deseq dataframe from A_2.Rmd
+load("df.RData")
+
+# Read the csv files to data frames (From Assignment_2.ipynb)
+data <- read_csv("../Data/data_event_sorted.csv") %>% tibble::column_to_rownames("index")
+clinical <- read_csv("../Data/clinical_event_sorted.csv") %>% as.data.frame(clinical)
+
+names(clinical)[names(clinical) == "Primary Cytogenetic Code"] <- "PCC"
+
+# Generate necessary ddset to calculate variance
+ddset <- DESeqDataSetFromMatrix(
+  countData = data,
+  colData = clinical,
+  design = ~PCC
+)
+```
+
+
+```{r}
+# Normalizing data
+dds_norm <- vst(ddset)
+
+# Calculate the variance for each gene
+variances <- apply(assay(dds_norm), 1, var)
+des_variances <- sort(variances, decreasing=TRUE)
+
+df_by_var <- data.frame(assay(dds_norm)) %>% filter(des_variances > 5.50)
+
+```
+
+# Determine the upper quantile resulting in top 10, 100, 1000, 5000, 10000
+upper_var_10 <- quantile(variances, 0.99963)
+upper_var_100 <- quantile(variances, 0.994)
+upper_var_1000 <- quantile(variances, 0.9)
+upper_var_5000 <- quantile(variances, 0.7)
+upper_var_10000 <- quantile(variances, 0.60)
+
+# Filter the data choosing only genes whose variances are in the upper quantile
+df_by_var_10 <- data.frame(assay(dds_norm)) %>%
+  dplyr::filter(variances > upper_var_10)
+df_by_var_100 <- data.frame(assay(dds_norm)) %>%
+  dplyr::filter(variances > upper_var_100)
+df_by_var_1000 <- data.frame(assay(dds_norm)) %>%
+  dplyr::filter(variances > upper_var_1000)
+df_by_var_5000 <- data.frame(assay(dds_norm)) %>%
+  dplyr::filter(variances > upper_var_5000)
+df_by_var_10000 <- data.frame(assay(dds_norm)) %>%
+  dplyr::filter(variances > upper_var_10000)
+
+# Save variance datasets
+
+```{r}
+
+des_variances[10]
+des_variances[100]
+des_variances[1000]
+des_variances[5000]
+des_variances[10000]
+
+```
