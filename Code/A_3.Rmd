@@ -34,26 +34,19 @@ load("deseq_set.Rdata")
 ```{r}
 # Normalizing data
 dds_norm <- assay(vst(ddset))
-dds_norm <- as.data.frame(dds_norm) # Convert to dataframe to access the rownames
 
 # Calculate the variance for each gene
 vars <- sort(apply(dds_norm, 1, var), decreasing = TRUE)
 
+dds_norm <- as.data.frame(dds_norm) # Convert to dataframe to access the rownames
+
 # Subset variances for 10, 100, 1000, 5000, and 10000 most variable genes
 i <- 10
 while (i <= 10000) {
-  var_list <- head(vars,i)
+  var_list <- names(head(vars,i))
   assign(paste("var", i, sep = ""), dds_norm[var_list, ]) # For some reason, var_list doesn't intersect with dds_norm and just outputs some random genes
   i <- i * 10
 }
-
-# Fernando's code
-df_by_var_10 <- data.frame(dds_norm) %>% filter(vars > 10.301)
-df_by_var_100 <- data.frame(dds_norm) %>% filter(vars > 5.5059)
-df_by_var_1000 <- data.frame(dds_norm) %>% filter(vars > 2.4587)
-df_by_var_5000 <- data.frame(dds_norm) %>% filter(vars > 0.8483)
-df_by_var_10000 <- data.frame(dds_norm) %>% filter(vars > 0.4282)
-
 ```
 
 # Save variance datasets
@@ -62,10 +55,9 @@ df_by_var_10000 <- data.frame(dds_norm) %>% filter(vars > 0.4282)
 
 setwd(dirname(getActiveDocumentContext()$path))
 
-write.csv(df_by_var_10,"../Data/most_variable_10.csv")
-write.csv(df_by_var_100,"../Data/most_variable_100.csv")
-write.csv(df_by_var_1000,"../Data/most_variable_1000.csv")
-write.csv(df_by_var_5000,"../Data/most_variable_5000.csv")
-write.csv(df_by_var_10000,"../Data/most_variable_10000.csv")
-
+write.csv(var10, "../Data/most_variable_10.csv")
+write.csv(var100, "../Data/most_variable_100.csv")
+write.csv(var1000, "../Data/most_variable_1000.csv")
+write.csv(var5000, "../Data/most_variable_5000.csv")
+write.csv(var10000, "../Data/most_variable_10000.csv")
 ```
