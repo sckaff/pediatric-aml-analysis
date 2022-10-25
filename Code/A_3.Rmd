@@ -9,6 +9,7 @@ Import libraries
 library(DESeq2)
 library(rstudioapi)
 library(dplyr)
+library(tidyverse)
 
 set.seed(12345)
 ```
@@ -43,37 +44,24 @@ dds_norm <- vst(ddset)
 variances <- apply(assay(dds_norm), 1, var)
 des_variances <- sort(variances, decreasing=TRUE)
 
-df_by_var <- data.frame(assay(dds_norm)) %>% filter(des_variances > 5.50)
+df_by_var_10 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 10.301)
+df_by_var_100 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 5.5059)
+df_by_var_1000 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 2.4587)
+df_by_var_5000 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 0.8483)
+df_by_var_10000 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 0.4282)
 
 ```
-
-# Determine the upper quantile resulting in top 10, 100, 1000, 5000, 10000
-upper_var_10 <- quantile(variances, 0.99963)
-upper_var_100 <- quantile(variances, 0.994)
-upper_var_1000 <- quantile(variances, 0.9)
-upper_var_5000 <- quantile(variances, 0.7)
-upper_var_10000 <- quantile(variances, 0.60)
-
-# Filter the data choosing only genes whose variances are in the upper quantile
-df_by_var_10 <- data.frame(assay(dds_norm)) %>%
-  dplyr::filter(variances > upper_var_10)
-df_by_var_100 <- data.frame(assay(dds_norm)) %>%
-  dplyr::filter(variances > upper_var_100)
-df_by_var_1000 <- data.frame(assay(dds_norm)) %>%
-  dplyr::filter(variances > upper_var_1000)
-df_by_var_5000 <- data.frame(assay(dds_norm)) %>%
-  dplyr::filter(variances > upper_var_5000)
-df_by_var_10000 <- data.frame(assay(dds_norm)) %>%
-  dplyr::filter(variances > upper_var_10000)
 
 # Save variance datasets
 
 ```{r}
 
-des_variances[10]
-des_variances[100]
-des_variances[1000]
-des_variances[5000]
-des_variances[10000]
+setwd(dirname(getActiveDocumentContext()$path))
+
+write.csv(df_by_var_10,"../Data/most_variable_10.csv")
+write.csv(df_by_var_100,"../Data/most_variable_100.csv")
+write.csv(df_by_var_1000,"../Data/most_variable_1000.csv")
+write.csv(df_by_var_5000,"../Data/most_variable_5000.csv")
+write.csv(df_by_var_10000,"../Data/most_variable_10000.csv")
 
 ```
