@@ -89,7 +89,7 @@ Gene expressions associated with different types of AML
 gene_expression <- function(gene_name) {
   file <- paste("../Figures/Gene/", gene_name, ".png")
   png(file)
-  plotCounts(ddset, gene = gene_name, intgroup = "PCC")
+  DeSeq2::plotCounts(ddset, gene = gene_name, intgroup = "PCC")
   dev.off()
 }
 

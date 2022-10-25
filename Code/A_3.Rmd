@@ -1,54 +1,58 @@
 ---
-title: "A_3"
+title: "Assignment 3"
 output: html_document
 date: "2022-10-24"
 ---
 
 Import libraries
-```{r}
-library(DESeq2)
-library(rstudioapi)
-library(dplyr)
-library(tidyverse)
+```{r Install and attach project libraries}
+# Script for installing required R packages for this project
+install.packages("librarian")
+install.packages("BiocManager") # For using librarian to install Bioconductor packages
+BiocManager::install("Biobase") # For using librarian to install Bioconductor packages
+librarian::shelf(DESeq2, rstudioapi, dplyr, tidyverse)
+```
 
+```{r Set seed}
 set.seed(12345)
 ```
 
 Read important datasets from Assignment 2
-```{r}
+```{r Read datasets}
 setwd(dirname(getActiveDocumentContext()$path))
-
-# Saved deseq dataframe from A_2.Rmd
-load("df.RData")
 
 # Read the csv files to data frames (From Assignment_2.ipynb)
 data <- read_csv("../Data/data_event_sorted.csv") %>% tibble::column_to_rownames("index")
 clinical <- read_csv("../Data/clinical_event_sorted.csv") %>% as.data.frame(clinical)
-
 names(clinical)[names(clinical) == "Primary Cytogenetic Code"] <- "PCC"
 
-# Generate necessary ddset to calculate variance
-ddset <- DESeqDataSetFromMatrix(
-  countData = data,
-  colData = clinical,
-  design = ~PCC
-)
+# Load pre-filtered deseq dataset generated in A_2.Rmd
+load("deseq_set.Rdata")
 ```
 
 
 ```{r}
 # Normalizing data
-dds_norm <- vst(ddset)
+dds_norm <- assay(vst(ddset))
+dds_norm <- as.data.frame(dds_norm) # Convert to dataframe to access the rownames
 
 # Calculate the variance for each gene
-variances <- apply(assay(dds_norm), 1, var)
-des_variances <- sort(variances, decreasing=TRUE)
+vars <- sort(apply(dds_norm, 1, var), decreasing = TRUE)
 
-df_by_var_10 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 10.301)
-df_by_var_100 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 5.5059)
-df_by_var_1000 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 2.4587)
-df_by_var_5000 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 0.8483)
-df_by_var_10000 <- data.frame(assay(dds_norm)) %>% filter(des_variances > 0.4282)
+# Subset variances for 10, 100, 1000, 5000, and 10000 most variable genes
+i <- 10
+while (i <= 10000) {
+  var_list <- head(vars,i)
+  assign(paste("var", i, sep = ""), dds_norm[var_list, ]) # For some reason, var_list doesn't intersect with dds_norm and just outputs some random genes
+  i <- i * 10
+}
+
+# Fernando's code
+df_by_var_10 <- data.frame(dds_norm) %>% filter(vars > 10.301)
+df_by_var_100 <- data.frame(dds_norm) %>% filter(vars > 5.5059)
+df_by_var_1000 <- data.frame(dds_norm) %>% filter(vars > 2.4587)
+df_by_var_5000 <- data.frame(dds_norm) %>% filter(vars > 0.8483)
+df_by_var_10000 <- data.frame(dds_norm) %>% filter(vars > 0.4282)
 
 ```
 
