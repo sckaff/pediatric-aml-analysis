@@ -44,9 +44,11 @@ dds_norm <- as.data.frame(dds_norm) # Convert to dataframe to access the rowname
 i <- 10
 while (i <= 10000) {
   var_list <- names(head(vars,i))
-  assign(paste("var", i, sep = ""), dds_norm[var_list, ]) # For some reason, var_list doesn't intersect with dds_norm and just outputs some random genes
+  assign(paste("var", i, sep = ""), dds_norm[var_list, ])
   i <- i * 10
 }
+# Subset variances for 5000
+var5000 <- dds_norm[names(head(vars, 5000)), ]
 ```
 
 # Save variance datasets
