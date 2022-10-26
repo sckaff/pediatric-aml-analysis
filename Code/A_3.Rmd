@@ -27,7 +27,7 @@ clinical <- read_csv("../Data/clinical_event_sorted.csv") %>% as.data.frame(clin
 names(clinical)[names(clinical) == "Primary Cytogenetic Code"] <- "PCC"
 
 # Load pre-filtered deseq dataset generated in A_2.Rmd
-load("deseq_set.Rdata")
+load("df.RData")
 ```
 
 
@@ -54,12 +54,11 @@ var5000 <- dds_norm[names(head(vars, 5000)), ]
 # Save variance datasets
 
 ```{r}
-
 setwd(dirname(getActiveDocumentContext()$path))
 
-write.csv(var10, "../Data/most_variable_10.csv")
-write.csv(var100, "../Data/most_variable_100.csv")
-write.csv(var1000, "../Data/most_variable_1000.csv")
-write.csv(var5000, "../Data/most_variable_5000.csv")
-write.csv(var10000, "../Data/most_variable_10000.csv")
+write.csv(var10, "../Data/Variance/most_variable_10.csv")
+write.csv(var100, "../Data/Variance/most_variable_100.csv")
+write.csv(var1000, "../Data/Variance/most_variable_1000.csv")
+write.csv(var5000, "../Data/Variance/most_variable_5000.csv")
+write.csv(var10000, "../Data/Variance/most_variable_10000.csv")
 ```
