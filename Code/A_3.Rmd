@@ -27,7 +27,7 @@ clinical <- read_csv("../Data/clinical_event_sorted.csv") %>% as.data.frame(clin
 names(clinical)[names(clinical) == "Primary Cytogenetic Code"] <- "PCC"
 
 # Load pre-filtered deseq dataset generated in A_2.Rmd
-load("df.RData")
+load("deseq_set.RData")
 ```
 
 

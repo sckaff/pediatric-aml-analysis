@@ -38,7 +38,7 @@ ddset <- DESeqDataSetFromMatrix(
 
 Pre-filtering ddset for efficiency
 ```{r Pre-filtering}
-ddset <- ddset[rowSums(counts(ddset), na.rm = TRUE) > 1, ] # Remove genes w/ low/NA counts
+ddset <- ddset[rowSums(counts(ddset) > 10, na.rm = TRUE) > 7, ] # Remove genes with fewer than 7 samples/10 counts
 save(ddset, file = "deseq_set.RData") # Save the pre-filtered dataset to use in Assignment 3
 ```
 
@@ -58,6 +58,10 @@ deseq_results <- lfcShrink(
   coef = 6, # The log fold change coefficient used in DESeq(); the default is 2.
   res = deseq_results # The original DESeq2 results table
 )
+```
+
+```{r}
+summary(deseq_results)
 ```
 
 ```{r DESeq2 results}
