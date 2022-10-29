@@ -146,9 +146,23 @@ write.csv(df_by_var, '../Data/significant_genes.csv', row.names = TRUE)
 ```
 
 
+- GE by most variable
+-- Get data
+```{r}
+setwd(dirname(getActiveDocumentContext()$path))
+
+data_10 <- read.csv('../Data/Variance/most_variable_10.csv')
+data_100 <- read.csv('../Data/Variance/most_variable_100.csv')
+data_1000 <- read.csv('../Data/Variance/most_variable_1000.csv')
+data_5000 <- read.csv('../Data/Variance/most_variable_5000.csv')
+data_10000 <- read.csv('../Data/Variance/most_variable_10000.csv')
+
+```
+
+
 - GENE ENHANCEMENT BY GPROFILER2
 ```{r Gene Enhancement with gprofiler2}
-gostres <- gost(row.names(data),
+gostres_10 <- gost(row.names(data_10),
   organism = "hsapiens",
   multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
   measure_underrepresentation = FALSE, evcodes = FALSE,
@@ -156,6 +170,61 @@ gostres <- gost(row.names(data),
   domain_scope = "annotated", custom_bg = NULL,
   numeric_ns = "", sources = NULL, as_short_link = FALSE
 )
+
+gostres_100 <- gost(row.names(data_100),
+  organism = "hsapiens",
+  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+  measure_underrepresentation = FALSE, evcodes = FALSE,
+  user_threshold = 0.05, correction_method = "g_SCS",
+  domain_scope = "annotated", custom_bg = NULL,
+  numeric_ns = "", sources = NULL, as_short_link = FALSE
+)
+
+gostres_1000 <- gost(row.names(data_1000),
+  organism = "hsapiens",
+  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+  measure_underrepresentation = FALSE, evcodes = FALSE,
+  user_threshold = 0.05, correction_method = "g_SCS",
+  domain_scope = "annotated", custom_bg = NULL,
+  numeric_ns = "", sources = NULL, as_short_link = FALSE
+)
+
+gostres_5000 <- gost(row.names(data_5000),
+  organism = "hsapiens",
+  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+  measure_underrepresentation = FALSE, evcodes = FALSE,
+  user_threshold = 0.05, correction_method = "g_SCS",
+  domain_scope = "annotated", custom_bg = NULL,
+  numeric_ns = "", sources = NULL, as_short_link = FALSE
+)
+
+gostres_10000 <- gost(row.names(data_10000),
+  organism = "hsapiens",
+  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+  measure_underrepresentation = FALSE, evcodes = FALSE,
+  user_threshold = 0.05, correction_method = "g_SCS",
+  domain_scope = "annotated", custom_bg = NULL,
+  numeric_ns = "", sources = NULL, as_short_link = FALSE
+)
+
+gostres_10 <- gost(row.names(data_10),
+  organism = "hsapiens",
+  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+  measure_underrepresentation = FALSE, evcodes = FALSE,
+  user_threshold = 0.05, correction_method = "g_SCS",
+  domain_scope = "annotated", custom_bg = NULL,
+  numeric_ns = "", sources = NULL, as_short_link = FALSE
+)
+```
+
+```{r}
+
+gostplot(gostres_10)
+gostplot(gostres_100)
+gostplot(gostres_1000)
+gostplot(gostres_5000)
+gostplot(gostres_10000)
+
 ```
 
 ```{r}
